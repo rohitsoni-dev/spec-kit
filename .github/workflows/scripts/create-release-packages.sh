@@ -185,8 +185,8 @@ build_variant() {
       mkdir -p "$base_dir/.amazonq/prompts"
       generate_commands q md "\$ARGUMENTS" "$base_dir/.amazonq/prompts" "$script" ;;
     continue)
-      mkdir -p "$base_dir/.continue/commands"
-      generate_commands continue md "\$ARGUMENTS" "$base_dir/.continue/commands" "$script" ;;
+      mkdir -p "$base_dir/.continue/prompts"
+      generate_commands continue md "\$ARGUMENTS" "$base_dir/.continue/prompts" "$script" ;;
   esac
   ( cd "$base_dir" && zip -r "../spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip" . )
   echo "Created $GENRELEASES_DIR/spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip"

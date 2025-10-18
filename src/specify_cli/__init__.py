@@ -147,7 +147,7 @@ AGENT_CONFIG = {
     "continue": {
         "name": "Continue",
         "folder": ".continue/",
-        "install_url": "https://marketplace.visualstudio.com/items?itemName=continue.continue",
+        "install_url": None,  # IDE-based
         "requires_cli": False,
     },
 }

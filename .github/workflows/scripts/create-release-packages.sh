@@ -89,6 +89,39 @@ generate_commands() {
     # Apply other substitutions
     body=$(printf '%s\n' "$body" | sed "s/{ARGS}/$arg_format/g" | sed "s/__AGENT__/$agent/g" | rewrite_paths)
     
+    # If agent is 'continue', prepend special YAML header
+    if [[ $agent == "continue" ]]; then
+      # Find description in body and write invokable: true in next line
+      if [[ -n "$description" ]]; then
+        # Insert name and invokable fields after the first --- delimiter
+        body=$(printf '%s' "$body" | awk -v name="$name" '
+        BEGIN { in_frontmatter = 0; processed = 0 }
+        /^---$/ { 
+          print
+          if (!processed) {
+            in_frontmatter = 1
+          }
+          next
+        }
+        in_frontmatter && /^description:/ && !processed { 
+          print "name: speckit." name
+          print
+          print "invokable: true"
+          processed = 1
+          next
+        }
+        in_frontmatter && /^[a-zA-Z]/ && !processed {
+          print "name: speckit." name
+          print "invokable: true"
+          print
+          processed = 1
+          in_frontmatter = 0
+        }
+        !in_frontmatter || processed { print }
+        ')  
+      fi
+    fi
+
     case $ext in
       toml)
         body=$(printf '%s\n' "$body" | sed 's/\\/\\\\/g')

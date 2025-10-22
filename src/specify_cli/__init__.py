@@ -144,12 +144,17 @@ AGENT_CONFIG = {
         "install_url": "https://aws.amazon.com/developer/learning/q-developer-cli/",
         "requires_cli": True,
     },
+    "amp": {
+        "name": "Amp",
+        "folder": ".agents/",
+        "install_url": "https://ampcode.com/manual#install",
+        "requires_cli": True,
+    },
     "continue": {
         "name": "Continue",
         "folder": ".continue/",
         "install_url": None,  # IDE-based
         "requires_cli": False,
-    },
 }
 
 SCRIPT_TYPE_CHOICES = {"sh": "POSIX Shell (bash/zsh)", "ps": "PowerShell"}
@@ -865,7 +870,7 @@ def ensure_executable_scripts(project_path: Path, tracker: StepTracker | None = 
 @app.command()
 def init(
     project_name: str = typer.Argument(None, help="Name for your new project directory (optional if using --here, or use '.' for current directory)"),
-    ai_assistant: str = typer.Option(None, "--ai", help="AI assistant to use: claude, gemini, copilot, cursor-agent, qwen, opencode, codex, windsurf, kilocode, auggie, codebuddy, roo, q, or continue"),
+    ai_assistant: str = typer.Option(None, "--ai", help="AI assistant to use: claude, gemini, copilot, cursor-agent, qwen, opencode, codex, windsurf, kilocode, auggie, codebuddy, amp, q, or continue"),
     script_type: str = typer.Option(None, "--script", help="Script type to use: sh or ps"),
     ignore_agent_tools: bool = typer.Option(False, "--ignore-agent-tools", help="Skip checks for AI agent tools like Claude Code"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
@@ -1170,18 +1175,25 @@ def check():
 
     tracker.add("git", "Git version control")
     git_ok = check_tool("git", tracker=tracker)
-    
+
     agent_results = {}
     for agent_key, agent_config in AGENT_CONFIG.items():
         agent_name = agent_config["name"]
-        
+        requires_cli = agent_config["requires_cli"]
+
         tracker.add(agent_key, agent_name)
-        agent_results[agent_key] = check_tool(agent_key, tracker=tracker)
-    
+
+        if requires_cli:
+            agent_results[agent_key] = check_tool(agent_key, tracker=tracker)
+        else:
+            # IDE-based agent - skip CLI check and mark as optional
+            tracker.skip(agent_key, "IDE-based, no CLI check")
+            agent_results[agent_key] = False  # Don't count IDE agents as "found"
+
     # Check VS Code variants (not in agent config)
     tracker.add("code", "Visual Studio Code")
     code_ok = check_tool("code", tracker=tracker)
-    
+
     tracker.add("code-insiders", "Visual Studio Code Insiders")
     code_insiders_ok = check_tool("code-insiders", tracker=tracker)
 

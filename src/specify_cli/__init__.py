@@ -155,6 +155,7 @@ AGENT_CONFIG = {
         "folder": ".continue/",
         "install_url": None,  # IDE-based
         "requires_cli": False,
+    },
 }
 
 SCRIPT_TYPE_CHOICES = {"sh": "POSIX Shell (bash/zsh)", "ps": "PowerShell"}

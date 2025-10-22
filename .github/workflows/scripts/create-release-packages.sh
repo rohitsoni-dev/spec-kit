@@ -6,7 +6,7 @@ set -euo pipefail
 # Usage: .github/workflows/scripts/create-release-packages.sh <version>
 #   Version argument should include leading 'v'.
 #   Optionally set AGENTS and/or SCRIPTS env vars to limit what gets built.
-#     AGENTS  : space or comma separated subset of: claude gemini copilot cursor-agent qwen opencode windsurf codex (default: all)
+#     AGENTS  : space or comma separated subset of: claude gemini copilot cursor-agent qwen opencode windsurf codex amp (default: all)
 #     SCRIPTS : space or comma separated subset of: sh ps (default: both)
 #   Examples:
 #     AGENTS=claude SCRIPTS=sh $0 v0.2.0
@@ -94,31 +94,7 @@ generate_commands() {
       # Find description in body and write invokable: true in next line
       if [[ -n "$description" ]]; then
         # Insert name and invokable fields after the first --- delimiter
-        body=$(printf '%s' "$body" | awk -v name="$name" '
-        BEGIN { in_frontmatter = 0; processed = 0 }
-        /^---$/ { 
-          print
-          if (!processed) {
-            in_frontmatter = 1
-          }
-          next
-        }
-        in_frontmatter && /^description:/ && !processed { 
-          print "name: speckit." name
-          print
-          print "invokable: true"
-          processed = 1
-          next
-        }
-        in_frontmatter && /^[a-zA-Z]/ && !processed {
-          print "name: speckit." name
-          print "invokable: true"
-          print
-          processed = 1
-          in_frontmatter = 0
-        }
-        !in_frontmatter || processed { print }
-        ')  
+        body=$(insert_yaml_frontmatter "$body" "$name" "invokable" "true")
       fi
     fi
 
@@ -132,6 +108,40 @@ generate_commands() {
         echo "$body" > "$output_dir/speckit.$name.$ext" ;;
     esac
   done
+}
+
+# Generic function to insert custom YAML frontmatter into prompt files
+insert_yaml_frontmatter() {
+  local body=$1
+  local name=$2
+  local field_name=$3
+  local field_value=$4
+  
+  printf '%s' "$body" | awk -v name="$name" -v field="$field_name" -v value="$field_value" '
+    BEGIN { in_frontmatter = 0; processed = 0 }
+    /^---$/ { 
+      print
+      if (!processed) {
+        in_frontmatter = 1
+      }
+      next
+    }
+    in_frontmatter && /^description:/ && !processed { 
+      print "name: speckit." name
+      print
+      print field ": " value
+      processed = 1
+      next
+    }
+    in_frontmatter && /^[a-zA-Z]/ && !processed {
+      print "name: speckit." name
+      print field ": " value
+      print
+      processed = 1
+      in_frontmatter = 0
+    }
+    !in_frontmatter || processed { print }
+  '
 }
 
 build_variant() {
@@ -213,7 +223,9 @@ build_variant() {
     codebuddy)
       mkdir -p "$base_dir/.codebuddy/commands"
       generate_commands codebuddy md "\$ARGUMENTS" "$base_dir/.codebuddy/commands" "$script" ;;
-
+    amp)
+      mkdir -p "$base_dir/.agents/commands"
+      generate_commands amp md "\$ARGUMENTS" "$base_dir/.agents/commands" "$script" ;;
     q)
       mkdir -p "$base_dir/.amazonq/prompts"
       generate_commands q md "\$ARGUMENTS" "$base_dir/.amazonq/prompts" "$script" ;;
@@ -226,7 +238,7 @@ build_variant() {
 }
 
 # Determine agent list
-ALL_AGENTS=(claude gemini copilot cursor-agent qwen opencode windsurf codex kilocode auggie roo codebuddy q continue)
+ALL_AGENTS=(claude gemini copilot cursor-agent qwen opencode windsurf codex kilocode auggie roo codebuddy amp q continue)
 ALL_SCRIPTS=(sh ps)
 
 norm_list() {
